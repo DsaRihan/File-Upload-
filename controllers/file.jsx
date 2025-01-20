@@ -33,6 +33,7 @@ function filetypesupported (type,supptype){
 // function
 async function uplpadfiletoclodinary(file,folder) {
     const option  = {folder}
+    option.resource_type = "auto"     //automatically detect the file type
     await  cloudinary.uploader.upload(file.tempFilePath);
 }
 
@@ -80,5 +81,52 @@ exports.imageUpload = async(req,res)=>{
             success:false,
             message:"Error uploading image"
         })
+    }
+}
+
+// video upload
+exports.videoUpload = async(req,res)=>{
+    try{
+        // fetch the data to upload to database
+        const {name ,tags, email, imageUrl} = req.body;
+
+        // fetch the file
+        const file = req.files.videofile;
+
+        // validation of the .file
+        const suptypes = ["mp4","mov"]
+        const filetype = file.name.split(".")[1].toLowerCase();
+
+        // function to check if the file type is valid
+       if(!filetypesupported(filetype,suptypes) || file.size > 5 * 1024 * 1024){
+            return res.status(400).json({
+            success:false,
+            message:"file type not supported or file size exceeds 5MB"
+            })
+        }
+
+        // format supported
+        // upload to cloudinary
+        const response = await uplpadfiletoclodinary(file,"rihanfile")
+        console.log(response)
+
+        // save it in the db
+        const newvideo = await File.create({
+            name,
+            tags,
+            email,
+            imageUrl:response.secure_url
+        })
+
+        res.json({
+            success:true,
+            message:"Video uploaded successfully",
+        })
+    }
+    catch(err){
+        res.status(400).json({
+            success:false,
+            message:"Error uploading video"
+            })
     }
 }
